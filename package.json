@@ -1,0 +1,12 @@
+{
+  "name": "redcheck",
+  "description": "Redis sentinel master change event listener and HAProxy updater",
+  "license": "GPLv3",
+  "author": {"name": "yuri arabadji"},
+  "version": "0.1.0",
+  "bin": "./app.js",
+  "dependencies": {
+    "ioredis": "^4.2.0"
+  },
+  "engines" : { "node" : ">= 6.14" }
+}
