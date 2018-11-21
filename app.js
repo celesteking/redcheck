@@ -198,7 +198,23 @@ function init_red_instance(red_args) {
         let voting_cleanup = () => {
             clearTimeout(qdata['timer']);
             delete qdata['timer'];
+
             qdata['voters'] = new Set();
+
+            if (qdata['elected'])
+                console.log(`<${master}> ------- Successfully closing election window for ${qdata['ip']} -------------\n`);
+            else
+                console.log(`<${master}> ---------- NO quorum inside election window for ${qdata['ip']} -------------\n`);
+            delete qdata['elected'];
+        }
+
+        let check_vote = () => {
+            if (qdata['voters'].add(host).size === opts.quorum_num) {
+                qdata['last_elected'] = newip;
+                qdata['elected'] = true;
+                console.log(`<${master}> ------------------------- Elected ${qdata['ip']} --------------------------`);
+                return quorum_cb(master, oldip, oldport, newip, newport);
+            }
         }
 
         if (qdata['last_elected'] === newip)
@@ -207,27 +223,17 @@ function init_red_instance(red_args) {
         if (!qdata['timer']) { // first event
             console.log(`[${host}]<${master}> First event: electing ${newip} ------------------------`);
 
-            qdata['voters'].add(host);
             qdata['ip'] = newip;
-
-            qdata['timer'] = setTimeout(() => {
-                voting_cleanup();
-                console.log(`<${master}> ---------- no quorum inside election window for ${qdata['ip']} -------------`);
-            }, opts.quorum_event_window);
+            qdata['timer'] = setTimeout(voting_cleanup, opts.quorum_event_window);
 
         } else { // inside quorum window
             console.log(`[${host}]<${master}> Followup event electing **${newip}**`);
 
             if (qdata['ip'] !== newip)
                 return console.log(`[${host}]<${master}> ALERT: wanted to elect a different master **${newip}**, ignoring...`);
-
-            if (qdata['voters'].add(host).size === opts.quorum_num) {
-                qdata['last_elected'] = newip;
-                voting_cleanup();
-                console.log(`<${master}> ------------------------- Elected ${qdata['ip']} --------------------------`);
-                return quorum_cb(master, oldip, oldport, newip, newport);
-            }
         }
+
+        check_vote();
     });
 
     redis.on('ready', () => {
