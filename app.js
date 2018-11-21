@@ -13,8 +13,6 @@ let opts = {
     quorum_num: 2, // number of nodes to consider quorum
     quorum_event_window: 5000, // in ms
 
-    retryStrategy: (times) => { return 5000; }, // fixed conn retry interval, in ms
-
     precheck: true, // retrieve & update master before main run
     precheck_masters: ['mred1'], // master names
 
@@ -30,7 +28,15 @@ let opts = {
         kill_command: (master, ip) => {
             return `shutdown sessions server b:${master}:${ip}/s:${master}:${ip}\n`;
         }
-    }
+    },
+
+    redis_opts: {
+        connectTimeout: 2000,
+        retryStrategy: (times) => { // fixed conn retry interval, in ms
+            return 5000;
+        },
+        maxRetriesPerRequest: null, // retry indefinitely
+    },
 };
 
 // ---------------------------------------------------------------------------
@@ -172,7 +178,7 @@ function quorum_cb (master, oldip, oldport, newip, newport) {
 
 function init_red_instance(red_args) {
     const host = red_args['host'];
-    const redis = new Redis(Object.assign(red_args, (({ retryStrategy }) => ({ retryStrategy }))(opts)));
+    const redis = new Redis(Object.assign(red_args, opts.redis_opts));
 
     redis.subscribe('+switch-master', (err, count) => {
         if (err)
